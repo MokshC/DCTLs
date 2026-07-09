@@ -1,0 +1,48 @@
+// Moksh
+
+// Clamp EXR Half Float
+__DEVICE__ float clamp(float x) {
+  // treat NaN/Inf by mapping to max finite (±65504)
+  if (isnan(x)) return 0.0f;
+  if (isinf(x)) return (x < 0.0f) ? -65504.0f : 65504.0f;
+  // clamp finite range
+  return _clampf(x, -65504.0f, 65504.0f);
+}
+__DEVICE__ float3 clamp(float3 rgb) {
+  return make_float3(
+    clamp(rgb.x), 
+    clamp(rgb.y), 
+    clamp(rgb.z)
+  );
+}
+
+// LogC4 to Linear
+__DEVICE__ float logc4_to_linear(float x) {
+  // Constants
+  const float a = (_powf(2.0f, 18.0f) - 16.0f) / 117.45f;
+  const float b = (1023.0f - 95.0f) / 1023.0f;
+  const float c = 95.0f / 1023.0f;
+  const float s = (7.0f * _logf(2.0f) * _powf(2.0f, 7.0f - 14.0f * c / b)) / (a * b);
+  const float t = (_powf(2.0f, 14.0f * (-c / b) + 6.0f) - 64.0f) / a;
+  // Formula
+  if (x < 0.0f) {
+    return x * s + t;
+  }
+  float p = 14.0f * (x - c) / b + 6.0f;
+  return (_powf(2.0f, p) - 64.0f) / a;
+}
+__DEVICE__ float3 logc4_to_linear(float3 rgb) {
+  return make_float3(
+    logc4_to_linear(rgb.x), 
+    logc4_to_linear(rgb.y), 
+    logc4_to_linear(rgb.z)
+  );
+}
+
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
+  float3 rgb = make_float3(p_R, p_G, p_B);
+  rgb = logc4_to_linear(rgb);
+  rgb = clamp(rgb);
+  return rgb;
+}

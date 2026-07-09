@@ -1,0 +1,76 @@
+// Moksh
+
+// https://github.com/aces-aswf/aces-input-and-colorspaces
+
+// DLog to Linear 
+__DEVICE__ float dlog_to_linear(float x) {
+    // https://dl.djicdn.com/downloads/DJI_Ronin_4D/X9_D_Log_D_Gamut_Whitepaper.pdf
+    float out;
+    if (x <= 0.14f) {
+        out = (x - 0.0929f) / 6.025f;
+    } else {
+        out = (_exp10f(3.89616f * x - 2.27752f) - 0.0108f) / 0.9892f;
+    }
+    return out;
+}
+__DEVICE__ float3 dlog_to_linear(float3 value) {
+	return make_float3(
+		dlog_to_linear(value.x), 
+		dlog_to_linear(value.y), 
+		dlog_to_linear(value.z)
+	);
+}
+
+
+// Linear to SLog3
+__DEVICE__ float linear_to_slog3(float in) {
+    // https://pro.sony/s3/cms-static-content/uploadfile/06/1237494271406.pdf
+    float out;
+    if (in >= 0.01125000f)
+    {
+        out = (420.0f + _log10f((in + 0.01f) / (0.18f + 0.01f)) * 261.5f) / 1023.0f;
+    } else {
+        out = (in * (171.2102946929f - 95.0f) / 0.01125000f + 95.0f) / 1023.0f;
+    }
+    return out;
+}
+
+__DEVICE__ float3 linear_to_slog3(float3 value) {
+	return make_float3(
+		linear_to_slog3(value.x), 
+		linear_to_slog3(value.y), 
+		linear_to_slog3(value.z)
+	);
+}
+
+
+// DJI D-Gamut to Sony SGamut.Cine 
+__DEVICE__ float3 dgamut_to_sgamutcine(float3 out) {
+
+  //Compute matrix for desired gamut transform
+  float color_mat[3][3] = {
+    { 1.0520810325, -0.0519394336, -0.0001906156},
+    { 0.0657881770,  0.9255831578,  0.0086149974},
+    { 0.0150206630, -0.0515897202,  1.0363429912},
+  };
+
+  //Matrix apply to rgb_linear
+  float r_d = out.x * color_mat[0][0] + out.y * color_mat [0][1] + out.z * color_mat[0][2];
+  float g_d = out.x * color_mat[1][0] + out.y * color_mat [1][1] + out.z * color_mat[1][2];
+  float b_d = out.x * color_mat[2][0] + out.y * color_mat [2][1] + out.z * color_mat[2][2];
+  
+  return make_float3(r_d, g_d, b_d);
+}
+
+
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
+	float3 rgb = make_float3(p_R, p_G, p_B);
+	rgb = dlog_to_linear(rgb);
+	rgb = dgamut_to_sgamutcine(rgb);
+	rgb = linear_to_slog3(rgb);
+	return rgb;
+}
+
+
+

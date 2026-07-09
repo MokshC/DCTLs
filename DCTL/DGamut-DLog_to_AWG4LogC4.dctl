@@ -1,0 +1,80 @@
+// Moksh
+
+// https://github.com/aces-aswf/aces-input-and-colorspaces
+
+// DLog to Linear 
+__DEVICE__ float dlog_to_linear(float x) {
+    // https://dl.djicdn.com/downloads/DJI_Ronin_4D/X9_D_Log_D_Gamut_Whitepaper.pdf
+    float out;
+    if (x <= 0.14f) {
+        out = (x - 0.0929f) / 6.025f;
+    } else {
+        out = (_exp10f(3.89616f * x - 2.27752f) - 0.0108f) / 0.9892f;
+    }
+    return out;
+}
+__DEVICE__ float3 dlog_to_linear(float3 value) {
+	return make_float3(
+		dlog_to_linear(value.x), 
+		dlog_to_linear(value.y), 
+		dlog_to_linear(value.z)
+	);
+}
+
+
+// Linear to LogC4
+__DEVICE__ float linear_to_logc4(float x) {
+    // https://www.arri.com/resource/blob/278790/bea879ac0d041a925bed27a096ab3ec2/2022-05-arri-logc4-specification-data.pdf
+    
+    // Constants
+    const float a = (_exp2f(18.0f) - 16.0f) / 117.45f;
+    const float b = (1023.0f - 95.0f) / 1023.0f;
+    const float c = 95.0f / 1023.0f;
+    const float s = (7.0f * logf(2.0f) * _powf(2.0f, 7.0f - 14.0f * c / b)) / (a * b);
+    const float t = (_exp2f(14.0f * (-c / b) + 6.0f) - 64.0f) / a;
+
+    if (x < t) {
+        return (x - t) / s;
+    }
+    return (_log2f( a * x + 64.0f) - 6.0f) / 14.0f * b + c;
+}
+
+__DEVICE__ float3 linear_to_logc4(float3 value) {
+	return make_float3(
+		linear_to_logc4(value.x), 
+		linear_to_logc4(value.y), 
+		linear_to_logc4(value.z)
+	);
+}
+
+
+// DJI D-Gamut to Arri Wide Gamut 4
+__DEVICE__ float3 dgamut_to_awg4(float3 out) {
+
+  //Compute matrix for desired gamut transform
+  float color_mat[3][3] = {
+    { 0.9104436704,  0.1030471552, -0.0135317203},
+    { 0.0648324499,  1.0035111196, -0.0683411535},
+    {-0.0168035166, -0.0763963159,  1.0929631594},
+  };
+
+  //Matrix apply to rgb_linear
+  float r_d = out.x * color_mat[0][0] + out.y * color_mat [0][1] + out.z * color_mat[0][2];
+  float g_d = out.x * color_mat[1][0] + out.y * color_mat [1][1] + out.z * color_mat[1][2];
+  float b_d = out.x * color_mat[2][0] + out.y * color_mat [2][1] + out.z * color_mat[2][2];
+  
+  return make_float3(r_d, g_d, b_d);
+}
+
+
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
+	float3 rgb = make_float3(p_R, p_G, p_B);
+	rgb = dlog_to_linear(rgb);
+	rgb = dgamut_to_awg4(rgb);
+	rgb = linear_to_logc4(rgb);
+	return rgb;
+}
+
+
+
