@@ -26,7 +26,6 @@ __DEVICE__ float logc3_to_linear(float t) {
   const float d = 0.385537f;
   const float e = 5.367655f;
   const float f = 0.092809f;
-  const float cut = 0.010591f;
   const float ecutf = 0.149658f;
 
   // Formula
@@ -87,8 +86,8 @@ __DEVICE__ float3 linear_to_logc4(float3 rgb) {
 
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
   float3 rgb = make_float3(p_R, p_G, p_B);
-	rgb = awg3_to_linear(rgb);
-	rgb = awg3_to_awg4(rgb);
+  rgb = logc3_to_linear(rgb);
+  rgb = awg3_to_awg4(rgb);
   rgb = clamp(rgb);
   rgb = linear_to_logc4(rgb);
   return rgb;
