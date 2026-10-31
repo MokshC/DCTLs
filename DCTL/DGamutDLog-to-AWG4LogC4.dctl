@@ -30,7 +30,7 @@ __DEVICE__ float linear_to_logc4(float x) {
     const float a = (_exp2f(18.0f) - 16.0f) / 117.45f;
     const float b = (1023.0f - 95.0f) / 1023.0f;
     const float c = 95.0f / 1023.0f;
-    const float s = (7.0f * logf(2.0f) * _powf(2.0f, 7.0f - 14.0f * c / b)) / (a * b);
+    const float s = (7.0f * _logf(2.0f) * _powf(2.0f, 7.0f - 14.0f * c / b)) / (a * b);
     const float t = (_exp2f(14.0f * (-c / b) + 6.0f) - 64.0f) / a;
 
     if (x < t) {
