@@ -1,18 +1,18 @@
 // Moksh
 
 // Clamp EXR Half Float
-__DEVICE__ float clamp(float x) {
+__DEVICE__ float clamp_exr(float x) {
   // treat NaN/Inf by mapping to max finite (±65504)
   if (isnan(x)) return 0.0f;
   if (isinf(x)) return (x < 0.0f) ? -65504.0f : 65504.0f;
   // clamp finite range
   return _clampf(x, -65504.0f, 65504.0f);
 }
-__DEVICE__ float3 clamp(float3 rgb) {
+__DEVICE__ float3 clamp_exr(float3 rgb) {
   return make_float3(
-    clamp(rgb.x), 
-    clamp(rgb.y), 
-    clamp(rgb.z)
+    clamp_exr(rgb.x), 
+    clamp_exr(rgb.y), 
+    clamp_exr(rgb.z)
   );
 }
 
@@ -86,9 +86,9 @@ __DEVICE__ float3 linear_to_logc4(float3 rgb) {
 
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
   float3 rgb = make_float3(p_R, p_G, p_B);
-  rgb = logc3_to_linear(rgb);
-  rgb = awg3_to_awg4(rgb);
-  rgb = clamp(rgb);
+	rgb = logc3_to_linear(rgb);
+	rgb = awg3_to_awg4(rgb);
+  rgb = clamp_exr(rgb);
   rgb = linear_to_logc4(rgb);
   return rgb;
 }
